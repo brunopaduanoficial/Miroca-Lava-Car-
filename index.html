@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Miroca Lava Car</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial;
+    background: #f2f2f2;
+    text-align: center;
+    font-size: 20px;
+    margin: 0;
+}
+h2 { font-size: 30px; }
+button {
+    padding: 18px;
+    margin: 8px;
+    background: #0a84ff;
+    border: none;
+    color: white;
+    border-radius: 10px;
+    font-size: 20px;
+    width: 90%;
+    max-width: 400px;
+}
+.container {
+    background: white;
+    padding: 20px;
+    margin: 15px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+input, select {
+    padding: 15px;
+    margin: 8px;
+    width: 90%;
+    font-size: 18px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+.servico {
+    background: #eaeaea;
+    margin: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 18px;
+}
+#pagamentoModal {
+    display: none;
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.7);
+}
+#pagamentoModal div {
+    background: white;
+    padding: 20px;
+    margin: 50px auto;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 10px;
+    text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Miroca Lava Car</h2>
+
+<button onclick="telaPrincipal()">🏠 Início</button>
+<button onclick="abrirRelatorio()">📊 Relatórios</button>
+
+<div id="principal">
+
+<div class="container">
+<input id="cliente" placeholder="Nome do cliente">
+<input id="placa" placeholder="Placa do carro">
+<select id="tipo">
+<option>Lavagem</option>
+</select>
+<input id="valor" placeholder="Preço do serviço" type="number" min="0">
+<br>
+<button onclick="abrirServico()">Abrir Serviço</button>
+</div>
+
+<div class="container">
+<h3>Serviços em andamento</h3>
+<div id="lista"></div>
+</div>
+
+<div class="container">
+<h3>Carros Lavados: <span id="carros">0</span></h3>
+<h3>Total do Dia: R$ <span id="total">0.00</span></h3>
+</div>
+
+</div>
+
+<div id="relatorios" style="display:none">
+<div class="container">
+<h3>Relatório do Dia</h3>
+<div id="relatorioDia"></div>
+<h3>Relatório do Mês</h3>
+<div id="relatorioMes"></div>
+</div>
+</div>
+
+<!-- Modal de pagamento -->
+<div id="pagamentoModal">
+<div>
+<h3>Forma de pagamento</h3>
+<select id="formaPagamento">
+<option value="Dinheiro">Dinheiro</option>
+<option value="Pix">Pix</option>
+<option value="Cartão de Crédito">Cartão de Crédito</option>
+<option value="Cartão de Débito">Cartão de Débito</option>
+</select>
+<br><br>
+<button onclick="finalizarPagamento()">Confirmar</button>
+<button onclick="fecharModal()">Cancelar</button>
+</div>
+</div>
+
+<script>
+let servicos = JSON.parse(localStorage.getItem("servicos")) || [];
+let total = Number(localStorage.getItem("total")) || 0;
+let carros = Number(localStorage.getItem("carros")) || 0;
+let historico = JSON.parse(localStorage.getItem("historico")) || [];
+let servicoAtualId = null;
+
+document.getElementById("total").innerText = total.toFixed(2);
+document.getElementById("carros").innerText = carros;
+
+function telaPrincipal(){
+    document.getElementById("principal").style.display="block";
+    document.getElementById("relatorios").style.display="none";
+    mostrar();
+}
+
+function abrirRelatorio(){
+    document.getElementById("principal").style.display="none";
+    document.getElementById("relatorios").style.display="block";
+    gerarRelatorio();
+}
+
+function abrirServico(){
+    let cliente = document.getElementById("cliente").value.trim();
+    let placa = document.getElementById("placa").value.trim();
+    let tipo = document.getElementById("tipo").value;
+    let valor = parseFloat(document.getElementById("valor").value);
+
+    if(cliente === "" || placa === "" || isNaN(valor)){
+        alert("Preencha todos os campos corretamente!");
+        return;
+    }
+
+    let id = Date.now();
+    servicos.push({id, cliente, placa, tipo, valor});
+    localStorage.setItem("servicos", JSON.stringify(servicos));
+    mostrar();
+}
+
+function abrirPagamento(id){
+    servicoAtualId = id;
+    document.getElementById("pagamentoModal").style.display = "block";
+}
+
+function fecharModal(){
+    document.getElementById("pagamentoModal").style.display = "none";
+}
+
+function finalizarPagamento(){
+    let forma = document.getElementById("formaPagamento").value;
+    let servico = servicos.find(s => s.id == servicoAtualId);
+    servico.formaPagamento = forma;
+
+    let valorNum = Number(servico.valor) || 0;
+
+    total += valorNum;
+    carros += 1;
+    localStorage.setItem("total", total);
+    localStorage.setItem("carros", carros);
+
+    historico.push({
+        cliente: servico.cliente,
+        placa: servico.placa,
+        tipo: servico.tipo,
+        valor: valorNum,
+        formaPagamento: forma,
+        data: new Date().toISOString()
+    });
+    localStorage.setItem("historico", JSON.stringify(historico));
+
+    servicos = servicos.filter(s => s.id != servicoAtualId);
+    localStorage.setItem("servicos", JSON.stringify(servicos));
+
+    document.getElementById("total").innerText = total.toFixed(2);
+    document.getElementById("carros").innerText = carros;
+    mostrar();
+    fecharModal();
+}
+
+function mostrar(){
+    let lista = document.getElementById("lista");
+    lista.innerHTML = "";
+    servicos.forEach(s=>{
+        lista.innerHTML += `
+        <div class="servico">
+        <b>${s.cliente}</b><br>
+        Placa: ${s.placa}<br>
+        Serviço: ${s.tipo}<br>
+        Valor: R$ ${Number(s.valor).toFixed(2)}<br><br>
+        <button onclick="abrirPagamento(${s.id})">Finalizar</button>
+        </div>
+        `;
+    });
+}
+
+function gerarRelatorio(){
+    let hoje = new Date().toISOString().slice(0,10);
+    let mes = new Date().toISOString().slice(0,7);
+
+    let totalDia = 0, carrosDia = 0;
+    let totalMes = 0, carrosMes = 0;
+
+    historico.forEach(s=>{
+        let valorNum = Number(s.valor) || 0; // Corrige NaN
+        if(s.data.slice(0,10) == hoje){
+            totalDia += valorNum;
+            carrosDia++;
+        }
+        if(s.data.slice(0,7) == mes){
+            totalMes += valorNum;
+            carrosMes++;
+        }
+    });
+
+    document.getElementById("relatorioDia").innerHTML =
+        "🚗 Carros: " + carrosDia + "<br>💰 Total: R$ " + totalDia.toFixed(2);
+
+    document.getElementById("relatorioMes").innerHTML =
+        "🚗 Carros: " + carrosMes + "<br>💰 Total: R$ " + totalMes.toFixed(2);
+}
+
+mostrar();
+</script>
+
+</body>
+</html>
