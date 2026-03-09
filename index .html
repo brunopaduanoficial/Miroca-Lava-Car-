@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Miroca Lava Car</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+
+body{
+font-family:Arial;
+background:#f2f2f2;
+text-align:center;
+}
+
+button{
+padding:10px;
+margin:5px;
+background:#0a84ff;
+border:none;
+color:white;
+border-radius:6px;
+}
+
+.container{
+background:white;
+padding:20px;
+margin:15px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+
+input, select{
+padding:8px;
+margin:5px;
+width:80%;
+}
+
+.servico{
+background:#eaeaea;
+margin:10px;
+padding:10px;
+border-radius:8px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Miroca Lava Car</h2>
+
+<button onclick="telaPrincipal()">🏠 Início</button>
+<button onclick="abrirConfig()">⚙️ Preços</button>
+<button onclick="abrirRelatorio()">📊 Relatórios</button>
+
+
+<div id="principal">
+
+<div class="container">
+
+<input id="cliente" placeholder="Nome do cliente">
+<input id="placa" placeholder="Placa do carro">
+
+<select id="tipo">
+
+<option value="simples">Lavagem Simples</option>
+<option value="motor">Lavagem de Motor</option>
+<option value="chassis">Lavagem de Chassis</option>
+<option value="cera">Lavagem com Cera</option>
+
+</select>
+
+<br>
+
+<button onclick="abrirServico()">Abrir Serviço</button>
+
+</div>
+
+
+<div class="container">
+
+<h3>Serviços em andamento</h3>
+
+<div id="lista"></div>
+
+</div>
+
+
+<div class="container">
+
+<h3>Carros Lavados: <span id="carros">0</span></h3>
+<h3>Total do Dia: R$ <span id="total">0</span></h3>
+
+</div>
+
+</div>
+
+
+<div id="config" style="display:none">
+
+<div class="container">
+
+<h3>Editar Preços</h3>
+
+<input id="psimples" placeholder="Lavagem Simples">
+<input id="pmotor" placeholder="Lavagem Motor">
+<input id="pchassis" placeholder="Lavagem Chassis">
+<input id="pcera" placeholder="Lavagem Cera">
+
+<br>
+
+<button onclick="salvarPrecos()">Salvar Preços</button>
+
+</div>
+
+</div>
+
+
+<div id="relatorios" style="display:none">
+
+<div class="container">
+
+<h3>Relatório do Dia</h3>
+<div id="relatorioDia"></div>
+
+<h3>Relatório do Mês</h3>
+<div id="relatorioMes"></div>
+
+</div>
+
+</div>
+
+
+<script>
+
+let servicos = JSON.parse(localStorage.getItem("servicos")) || []
+
+let total = Number(localStorage.getItem("total")) || 0
+let carros = Number(localStorage.getItem("carros")) || 0
+
+document.getElementById("total").innerText = total
+document.getElementById("carros").innerText = carros
+
+
+let precos = JSON.parse(localStorage.getItem("precos")) || {
+
+simples:30,
+motor:50,
+chassis:40,
+cera:60
+
+}
+
+document.getElementById("psimples").value = precos.simples
+document.getElementById("pmotor").value = precos.motor
+document.getElementById("pchassis").value = precos.chassis
+document.getElementById("pcera").value = precos.cera
+
+
+let historico = JSON.parse(localStorage.getItem("historico")) || []
+
+
+function telaPrincipal(){
+
+document.getElementById("principal").style.display="block"
+document.getElementById("config").style.display="none"
+document.getElementById("relatorios").style.display="none"
+
+mostrar()
+
+}
+
+
+function abrirConfig(){
+
+document.getElementById("principal").style.display="none"
+document.getElementById("config").style.display="block"
+document.getElementById("relatorios").style.display="none"
+
+}
+
+
+function abrirRelatorio(){
+
+document.getElementById("principal").style.display="none"
+document.getElementById("config").style.display="none"
+document.getElementById("relatorios").style.display="block"
+
+gerarRelatorio()
+
+}
+
+
+function salvarPrecos(){
+
+precos.simples=document.getElementById("psimples").value
+precos.motor=document.getElementById("pmotor").value
+precos.chassis=document.getElementById("pchassis").value
+precos.cera=document.getElementById("pcera").value
+
+localStorage.setItem("precos",JSON.stringify(precos))
+
+alert("Preços atualizados")
+
+}
+
+
+function abrirServico(){
+
+let cliente=document.getElementById("cliente").value
+let placa=document.getElementById("placa").value
+let tipo=document.getElementById("tipo").value
+
+let valor=precos[tipo]
+
+let id=Date.now()
+
+servicos.push({
+id,
+cliente,
+placa,
+tipo,
+valor
+})
+
+localStorage.setItem("servicos", JSON.stringify(servicos))
+
+mostrar()
+
+}
+
+
+function fecharServico(id){
+
+let servico=servicos.find(s=>s.id==id)
+
+total += Number(servico.valor)
+carros += 1
+
+localStorage.setItem("total", total)
+localStorage.setItem("carros", carros)
+
+historico.push({
+cliente:servico.cliente,
+placa:servico.placa,
+tipo:servico.tipo,
+valor:servico.valor,
+data:new Date().toISOString()
+})
+
+localStorage.setItem("historico", JSON.stringify(historico))
+
+servicos = servicos.filter(s=>s.id!=id)
+
+localStorage.setItem("servicos", JSON.stringify(servicos))
+
+document.getElementById("total").innerText = total
+document.getElementById("carros").innerText = carros
+
+mostrar()
+
+}
+
+
+function mostrar(){
+
+let lista=document.getElementById("lista")
+
+lista.innerHTML=""
+
+servicos.forEach(s=>{
+
+lista.innerHTML += `
+
+<div class="servico">
+
+<b>${s.cliente}</b><br>
+Placa: ${s.placa}<br>
+Serviço: ${s.tipo}<br>
+Valor: R$ ${s.valor}<br><br>
+
+<button onclick="fecharServico(${s.id})">Finalizar</button>
+
+</div>
+
+`
+
+})
+
+}
+
+
+function gerarRelatorio(){
+
+let hoje=new Date().toISOString().slice(0,10)
+let mes=new Date().toISOString().slice(0,7)
+
+let totalDia=0
+let carrosDia=0
+
+let totalMes=0
+let carrosMes=0
+
+historico.forEach(s=>{
+
+if(s.data.slice(0,10)==hoje){
+
+totalDia+=Number(s.valor)
+carrosDia++
+
+}
+
+if(s.data.slice(0,7)==mes){
+
+totalMes+=Number(s.valor)
+carrosMes++
+
+}
+
+})
+
+document.getElementById("relatorioDia").innerHTML =
+"🚗 Carros: "+carrosDia+"<br>💰 Total: R$ "+totalDia
+
+document.getElementById("relatorioMes").innerHTML =
+"🚗 Carros: "+carrosMes+"<br>💰 Total: R$ "+totalMes
+
+}
+
+mostrar()
+
+</script>
+
+</body>
+
+</html>
