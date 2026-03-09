@@ -56,8 +56,6 @@ border-radius:8px;
 <button onclick="abrirRelatorio()">📊 Relatórios</button>
 
 
-<!-- TELA PRINCIPAL -->
-
 <div id="principal">
 
 <div class="container">
@@ -100,9 +98,6 @@ border-radius:8px;
 </div>
 
 
-
-<!-- TELA PREÇOS -->
-
 <div id="config" style="display:none">
 
 <div class="container">
@@ -123,9 +118,6 @@ border-radius:8px;
 </div>
 
 
-
-<!-- TELA RELATORIOS -->
-
 <div id="relatorios" style="display:none">
 
 <div class="container">
@@ -143,16 +135,16 @@ border-radius:8px;
 
 <script>
 
-let servicos=[]
+let servicos = JSON.parse(localStorage.getItem("servicos")) || []
 
-let total=Number(localStorage.getItem("total"))||0
-let carros=Number(localStorage.getItem("carros"))||0
+let total = Number(localStorage.getItem("total")) || 0
+let carros = Number(localStorage.getItem("carros")) || 0
 
-document.getElementById("total").innerText=total
-document.getElementById("carros").innerText=carros
+document.getElementById("total").innerText = total
+document.getElementById("carros").innerText = carros
 
 
-let precos=JSON.parse(localStorage.getItem("precos"))||{
+let precos = JSON.parse(localStorage.getItem("precos")) || {
 
 simples:30,
 motor:50,
@@ -161,14 +153,13 @@ cera:60
 
 }
 
-document.getElementById("psimples").value=precos.simples
-document.getElementById("pmotor").value=precos.motor
-document.getElementById("pchassis").value=precos.chassis
-document.getElementById("pcera").value=precos.cera
+document.getElementById("psimples").value = precos.simples
+document.getElementById("pmotor").value = precos.motor
+document.getElementById("pchassis").value = precos.chassis
+document.getElementById("pcera").value = precos.cera
 
 
-let historico=JSON.parse(localStorage.getItem("historico"))||[]
-
+let historico = JSON.parse(localStorage.getItem("historico")) || []
 
 
 function telaPrincipal(){
@@ -176,6 +167,8 @@ function telaPrincipal(){
 document.getElementById("principal").style.display="block"
 document.getElementById("config").style.display="none"
 document.getElementById("relatorios").style.display="none"
+
+mostrar()
 
 }
 
@@ -200,7 +193,6 @@ gerarRelatorio()
 }
 
 
-
 function salvarPrecos(){
 
 precos.simples=document.getElementById("psimples").value
@@ -215,7 +207,6 @@ alert("Preços atualizados")
 }
 
 
-
 function abrirServico(){
 
 let cliente=document.getElementById("cliente").value
@@ -227,52 +218,50 @@ let valor=precos[tipo]
 let id=Date.now()
 
 servicos.push({
-
 id,
 cliente,
 placa,
 tipo,
 valor
-
 })
+
+localStorage.setItem("servicos", JSON.stringify(servicos))
 
 mostrar()
 
 }
-
 
 
 function fecharServico(id){
 
 let servico=servicos.find(s=>s.id==id)
 
-total+=Number(servico.valor)
-carros+=1
+total += Number(servico.valor)
+carros += 1
 
-localStorage.setItem("total",total)
-localStorage.setItem("carros",carros)
+localStorage.setItem("total", total)
+localStorage.setItem("carros", carros)
 
 historico.push({
-
 cliente:servico.cliente,
 placa:servico.placa,
 tipo:servico.tipo,
 valor:servico.valor,
 data:new Date().toISOString()
-
 })
 
-localStorage.setItem("historico",JSON.stringify(historico))
+localStorage.setItem("historico", JSON.stringify(historico))
 
-document.getElementById("total").innerText=total
-document.getElementById("carros").innerText=carros
+servicos = servicos.filter(s=>s.id!=id)
 
-servicos=servicos.filter(s=>s.id!=id)
+localStorage.setItem("servicos", JSON.stringify(servicos))
+
+document.getElementById("total").innerText = total
+document.getElementById("carros").innerText = carros
 
 mostrar()
 
 }
-
 
 
 function mostrar(){
@@ -283,7 +272,7 @@ lista.innerHTML=""
 
 servicos.forEach(s=>{
 
-lista.innerHTML+=`
+lista.innerHTML += `
 
 <div class="servico">
 
@@ -301,7 +290,6 @@ Valor: R$ ${s.valor}<br><br>
 })
 
 }
-
 
 
 function gerarRelatorio(){
@@ -333,15 +321,15 @@ carrosMes++
 
 })
 
-document.getElementById("relatorioDia").innerHTML=
-
+document.getElementById("relatorioDia").innerHTML =
 "🚗 Carros: "+carrosDia+"<br>💰 Total: R$ "+totalDia
 
-document.getElementById("relatorioMes").innerHTML=
-
+document.getElementById("relatorioMes").innerHTML =
 "🚗 Carros: "+carrosMes+"<br>💰 Total: R$ "+totalMes
 
 }
+
+mostrar()
 
 </script>
 
