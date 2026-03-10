@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Miroca Lava Car</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f2f2f2;
+text-align:center;
+margin:0;
+}
+
+h2{
+font-size:28px;
+}
+
+button{
+padding:15px;
+margin:5px;
+background:#0a84ff;
+border:none;
+color:white;
+border-radius:10px;
+font-size:16px;
+width:90%;
+max-width:400px;
+}
+
+.container{
+background:white;
+padding:20px;
+margin:15px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+
+input,select{
+padding:12px;
+margin:5px;
+width:90%;
+font-size:16px;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+.servico{
+background:#eaeaea;
+margin:10px;
+padding:15px;
+border-radius:10px;
+}
+
+.modal{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.7);
+}
+
+.modal-content{
+background:white;
+padding:20px;
+margin:50px auto;
+width:90%;
+max-width:400px;
+border-radius:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Miroca Lava Car</h2>
+
+<button onclick="telaInicio()">🏠 Início</button>
+<button onclick="abrirRelatorio()">📊 Relatórios</button>
+<button onclick="abrirMenu()">☰ Menu</button>
+<button onclick="backup()">💾 Backup</button>
+
+<div id="inicio">
+
+<div class="container">
+
+<input id="cliente" placeholder="Nome do cliente">
+<input id="placa" placeholder="Placa do veículo">
+
+<button onclick="abrirServico()">Abrir Serviço</button>
+
+</div>
+
+<div class="container">
+
+<h3>Serviços em andamento</h3>
+
+<div id="lista"></div>
+
+</div>
+
+<div class="container">
+
+<h3>Carros hoje: <span id="carros">0</span></h3>
+<h3>Total hoje: R$ <span id="total">0.00</span></h3>
+
+</div>
+
+</div>
+
+<div id="relatorios" style="display:none">
+
+<div class="container">
+
+<h3>Relatório do dia</h3>
+
+<div id="relatorioDia"></div>
+
+<h3>Relatório do mês</h3>
+
+<div id="relatorioMes"></div>
+
+</div>
+
+</div>
+
+<div id="menu" style="display:none">
+
+<div class="container">
+
+<h3>Menu</h3>
+
+<button onclick="abrirGrafico()">📈 Gráfico faturamento mês</button>
+
+<button onclick="abrirHistorico()">📅 Histórico de dias</button>
+
+<button onclick="telaInicio()">⬅ Voltar</button>
+
+</div>
+
+</div>
+
+<div id="graficoTela" style="display:none">
+
+<div class="container">
+
+<h3>Faturamento do mês</h3>
+
+<canvas id="grafico" height="200"></canvas>
+
+<button onclick="abrirMenu()">⬅ Voltar</button>
+
+</div>
+
+</div>
+
+<div id="historicoTela" style="display:none">
+
+<div class="container">
+
+<h3>Histórico de serviços</h3>
+
+<div id="listaHistorico"></div>
+
+<button onclick="abrirMenu()">⬅ Voltar</button>
+
+</div>
+
+</div>
+
+<div id="modalPagamento" class="modal">
+
+<div class="modal-content">
+
+<h3>Finalizar serviço</h3>
+
+<select id="tipoServico">
+
+<option>Lavagem</option>
+
+</select>
+
+<input id="valorServico" type="number" placeholder="Valor do serviço">
+
+<select id="formaPagamento">
+
+<option>Dinheiro</option>
+<option>Pix</option>
+<option>Cartão Crédito</option>
+<option>Cartão Débito</option>
+
+</select>
+
+<button onclick="finalizarServico()">Finalizar</button>
+
+<button onclick="fecharModal()">Cancelar</button>
+
+</div>
+
+</div>
+
+<script>
+
+let servicos = JSON.parse(localStorage.getItem("servicos")) || []
+let historico = JSON.parse(localStorage.getItem("historico")) || []
+
+let total = Number(localStorage.getItem("total")) || 0
+let carros = Number(localStorage.getItem("carros")) || 0
+
+let hoje = new Date().toISOString().slice(0,10)
+let dataSalva = localStorage.getItem("dataAtual")
+
+if(dataSalva != hoje){
+
+total = 0
+carros = 0
+
+localStorage.setItem("total",0)
+localStorage.setItem("carros",0)
+
+localStorage.setItem("dataAtual",hoje)
+
+}
+
+document.getElementById("total").innerText = total.toFixed(2)
+document.getElementById("carros").innerText = carros
+
+let servicoAtual=null
+
+function telaInicio(){
+
+document.getElementById("inicio").style.display="block"
+document.getElementById("relatorios").style.display="none"
+document.getElementById("menu").style.display="none"
+document.getElementById("graficoTela").style.display="none"
+document.getElementById("historicoTela").style.display="none"
+
+}
+
+function abrirRelatorio(){
+
+telaInicio()
+
+document.getElementById("inicio").style.display="none"
+document.getElementById("relatorios").style.display="block"
+
+gerarRelatorio()
+
+}
+
+function abrirMenu(){
+
+telaInicio()
+
+document.getElementById("inicio").style.display="none"
+document.getElementById("menu").style.display="block"
+
+}
+
+function abrirServico(){
+
+let cliente=document.getElementById("cliente").value.trim()
+let placa=document.getElementById("placa").value.trim()
+
+if(cliente==""||placa==""){
+
+alert("Preencha cliente e placa")
+return
+
+}
+
+let id=Date.now()
+
+servicos.push({
+
+id,
+cliente,
+placa
+
+})
+
+localStorage.setItem("servicos",JSON.stringify(servicos))
+
+document.getElementById("cliente").value=""
+document.getElementById("placa").value=""
+
+mostrar()
+
+}
+
+function mostrar(){
+
+let lista=document.getElementById("lista")
+
+lista.innerHTML=""
+
+servicos.forEach(s=>{
+
+lista.innerHTML += `
+
+<div class="servico">
+
+<b>${s.cliente}</b><br>
+
+Placa: ${s.placa}
+
+<br><br>
+
+<button onclick="abrirPagamento(${s.id})">Finalizar</button>
+
+<button onclick="cancelarServico(${s.id})" style="background:red">Cancelar</button>
+
+</div>
+
+`
+
+})
+
+}
+
+function abrirPagamento(id){
+
+servicoAtual=id
+
+document.getElementById("modalPagamento").style.display="block"
+
+}
+
+function fecharModal(){
+
+document.getElementById("modalPagamento").style.display="none"
+
+}
+
+function finalizarServico(){
+
+let tipo=document.getElementById("tipoServico").value
+let valor=parseFloat(document.getElementById("valorServico").value)
+let forma=document.getElementById("formaPagamento").value
+
+if(isNaN(valor)){
+
+alert("Digite valor")
+return
+
+}
+
+let servico=servicos.find(s=>s.id==servicoAtual)
+
+total += valor
+carros += 1
+
+localStorage.setItem("total",total)
+localStorage.setItem("carros",carros)
+
+historico.push({
+
+cliente:servico.cliente,
+placa:servico.placa,
+tipo,
+valor,
+forma,
+data:new Date().toISOString()
+
+})
+
+localStorage.setItem("historico",JSON.stringify(historico))
+
+servicos = servicos.filter(s=>s.id!=servicoAtual)
+
+localStorage.setItem("servicos",JSON.stringify(servicos))
+
+document.getElementById("total").innerText = total.toFixed(2)
+document.getElementById("carros").innerText = carros
+
+document.getElementById("valorServico").value=""
+
+mostrar()
+
+fecharModal()
+
+}
+
+function cancelarServico(id){
+
+servicos = servicos.filter(s=>s.id!=id)
+
+localStorage.setItem("servicos",JSON.stringify(servicos))
+
+mostrar()
+
+}
+
+function gerarRelatorio(){
+
+let hoje=new Date().toISOString().slice(0,10)
+let mes=new Date().toISOString().slice(0,7)
+
+let totalDia=0
+let carrosDia=0
+
+let totalMes=0
+let carrosMes=0
+
+let pix=0
+let dinheiro=0
+let credito=0
+let debito=0
+
+historico.forEach(s=>{
+
+let valor=Number(s.valor)||0
+
+if(s.data.slice(0,10)==hoje){
+
+totalDia += valor
+carrosDia++
+
+if(s.forma=="Pix") pix+=valor
+if(s.forma=="Dinheiro") dinheiro+=valor
+if(s.forma=="Cartão Crédito") credito+=valor
+if(s.forma=="Cartão Débito") debito+=valor
+
+}
+
+if(s.data.slice(0,7)==mes){
+
+totalMes += valor
+carrosMes++
+
+}
+
+})
+
+let totalGeral = pix+dinheiro+credito+debito
+
+document.getElementById("relatorioDia").innerHTML=
+
+"🚘 Carros: "+carrosDia+
+"<br><br>💵 Dinheiro: R$ "+dinheiro.toFixed(2)+
+"<br>📱 Pix: R$ "+pix.toFixed(2)+
+"<br>💳 Crédito: R$ "+credito.toFixed(2)+
+"<br>💳 Débito: R$ "+debito.toFixed(2)+
+"<br><br>📊 Total geral: R$ "+totalGeral.toFixed(2)
+
+document.getElementById("relatorioMes").innerHTML=
+
+"🚘 Carros: "+carrosMes+
+"<br>💰 Total mês: R$ "+totalMes.toFixed(2)
+
+}
+
+function abrirGrafico(){
+
+document.getElementById("menu").style.display="none"
+document.getElementById("graficoTela").style.display="block"
+
+let mes=new Date().toISOString().slice(0,7)
+
+let dias={}
+
+historico.forEach(s=>{
+
+if(s.data.slice(0,7)==mes){
+
+let dia=s.data.slice(8,10)
+
+if(!dias[dia]) dias[dia]=0
+
+dias[dia]+=Number(s.valor)
+
+}
+
+})
+
+let labels=Object.keys(dias)
+let dados=Object.values(dias)
+
+new Chart(document.getElementById("grafico"),{
+
+type:"bar",
+
+data:{
+labels:labels,
+datasets:[{
+label:"Faturamento R$",
+data:dados
+}]
+}
+
+})
+
+}
+
+function abrirHistorico(){
+
+document.getElementById("menu").style.display="none"
+document.getElementById("historicoTela").style.display="block"
+
+let lista=document.getElementById("listaHistorico")
+
+lista.innerHTML=""
+
+historico.slice().reverse().forEach(s=>{
+
+lista.innerHTML +=
+
+"<div class='servico'><b>"+s.cliente+
+"</b><br>"+s.placa+
+"<br>R$ "+Number(s.valor).toFixed(2)+
+"<br>"+s.forma+
+"<br>"+s.data.slice(0,10)+
+"</div>"
+
+})
+
+}
+
+function backup(){
+
+let dados={servicos,historico,total,carros}
+
+let texto=JSON.stringify(dados)
+
+let blob=new Blob([texto],{type:"application/json"})
+
+let link=document.createElement("a")
+
+link.href=URL.createObjectURL(blob)
+
+link.download="backup_lavacar.json"
+
+link.click()
+
+}
+
+mostrar()
+
+</script>
+
+</body>
+</html>
