@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Sistema de Lavagem</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f2f2f2;
+margin:0;
+text-align:center;
+}
+
+header{
+background:#111;
+color:white;
+padding:15px;
+font-size:22px;
+}
+
+button{
+padding:12px;
+margin:6px;
+width:90%;
+font-size:16px;
+border:none;
+border-radius:6px;
+background:#007bff;
+color:white;
+}
+
+input,select{
+width:90%;
+padding:10px;
+margin:5px;
+font-size:16px;
+}
+
+.servico{
+background:white;
+margin:10px;
+padding:10px;
+border-radius:6px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>Painel de Controle</header>
+
+<button onclick="abrirInicio()">▶ Iniciar</button>
+<button onclick="abrirMenu()">☰ Menu</button>
+
+
+<div id="inicio" style="display:none">
+
+<h3>Abrir Serviço</h3>
+
+<input id="cliente" placeholder="Nome do cliente">
+<input id="placa" placeholder="Placa do veículo">
+
+<button onclick="abrirServico()">Abrir Serviço</button>
+
+<h3>Serviços em andamento</h3>
+
+<div id="listaServicos"></div>
+
+</div>
+
+
+<div id="menu" style="display:none">
+
+<h3>Menu</h3>
+
+<button onclick="abrirRelatorios()">📊 Relatórios</button>
+<button onclick="abrirHistorico()">📜 Histórico</button>
+<button onclick="abrirAgendamentos()">📅 Agendamentos</button>
+<button onclick="abrirOrcamento()">🧾 Orçamento</button>
+
+<button onclick="abrirInicio()">⬅ Voltar</button>
+
+</div>
+
+
+<div id="relatorios" style="display:none">
+
+<h3>Relatórios</h3>
+
+<p>💰Total do dia: R$ <span id="totalDia">0</span></p>
+
+<p>📱Pix: R$ <span id="pixDia">0</span></p>
+<p>💵Dinheiro: R$ <span id="dinheiroDia">0</span></p>
+<p>💳Cartão Débito: R$ <span id="debitoDia">0</span></p>
+<p>💳Cartão Crédito: R$ <span id="creditoDia">0</span></p>
+
+<p>💰Total do mês: R$ <span id="totalMes">0</span></p>
+<p>📊Total geral: R$ <span id="totalGeral">0</span></p>
+
+<h3>Faturamento</h3>
+
+<canvas id="grafico"></canvas>
+
+<button onclick="abrirMenu()">Voltar</button>
+
+</div>
+
+
+<div id="historicoTela" style="display:none">
+
+<h3>Histórico</h3>
+
+<input id="buscarCliente" placeholder="Buscar cliente">
+
+<button onclick="buscarHistorico()">🔍Buscar</button>
+
+<div id="listaHistorico"></div>
+
+<button onclick="abrirMenu()">Voltar</button>
+
+</div>
+
+
+<div id="agendamentos" style="display:none">
+
+<h3>Agendamentos</h3>
+
+<input id="nomeAg" placeholder="Cliente">
+<input id="telAg" placeholder="Telefone">
+<input id="dataAg" placeholder="Data"> 
+
+<button onclick="salvarAgendamento()">Salvar</button>
+
+<div id="listaAgendamentos"></div>
+
+<button onclick="abrirMenu()">Voltar</button>
+
+</div>
+
+
+<div id="orcamento" style="display:none">
+
+<h3>Orçamento</h3>
+
+<input id="clienteOrc" placeholder="Cliente">
+<input id="descOrc" placeholder="Serviço">
+<input id="valorOrc" placeholder="Valor">
+
+<button onclick="enviarOrcamento()">Enviar WhatsApp</button>
+
+<button onclick="abrirMenu()">Voltar</button>
+
+</div>
+
+
+
+<script>
+
+let servicos = JSON.parse(localStorage.getItem("servicos")) || []
+let historico = JSON.parse(localStorage.getItem("historico")) || []
+let agendamentos = JSON.parse(localStorage.getItem("agendamentos")) || []
+
+
+function esconder(){
+
+document.getElementById("inicio").style.display="none"
+document.getElementById("menu").style.display="none"
+document.getElementById("relatorios").style.display="none"
+document.getElementById("historicoTela").style.display="none"
+document.getElementById("agendamentos").style.display="none"
+document.getElementById("orcamento").style.display="none"
+
+}
+
+
+
+function abrirInicio(){
+
+esconder()
+document.getElementById("inicio").style.display="block"
+mostrarServicos()
+
+}
+
+
+
+function abrirMenu(){
+
+esconder()
+document.getElementById("menu").style.display="block"
+
+}
+
+
+
+function abrirRelatorios(){
+
+esconder()
+document.getElementById("relatorios").style.display="block"
+calcularRelatorio()
+
+}
+
+
+
+function abrirHistorico(){
+
+esconder()
+document.getElementById("historicoTela").style.display="block"
+carregarHistorico()
+
+}
+
+
+
+function abrirAgendamentos(){
+
+esconder()
+document.getElementById("agendamentos").style.display="block"
+mostrarAgendamentos()
+
+}
+
+
+
+function abrirOrcamento(){
+
+esconder()
+document.getElementById("orcamento").style.display="block"
+
+}
+
+
+
+function abrirServico(){
+
+let cliente=document.getElementById("cliente").value
+let placa=document.getElementById("placa").value
+
+if(cliente==""||placa==""){
+alert("Preencha os dados")
+return
+}
+
+servicos.push({
+id:Date.now(),
+cliente,
+placa
+})
+
+localStorage.setItem("servicos",JSON.stringify(servicos))
+mostrarServicos()
+
+}
+
+
+
+function mostrarServicos(){
+
+let lista=document.getElementById("listaServicos")
+lista.innerHTML=""
+
+servicos.forEach(s=>{
+
+lista.innerHTML+=`
+
+<div class="servico">
+
+<b>${s.cliente}</b><br>
+Placa: ${s.placa}
+
+<br><br>
+
+<input id="valor${s.id}" placeholder="Valor">
+
+<select id="pag${s.id}">
+<option>Pix</option>
+<option>Dinheiro</option>
+<option>Cartão Débito</option>
+<option>Cartão Crédito</option>
+</select>
+
+<button onclick="finalizarServico(${s.id})">Finalizar</button>
+<button onclick="cancelarServico(${s.id})">Cancelar</button>
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+function finalizarServico(id){
+
+let valor=parseFloat(document.getElementById("valor"+id).value)||0
+let pagamento=document.getElementById("pag"+id).value
+
+let servico=servicos.find(s=>s.id==id)
+
+historico.push({
+cliente:servico.cliente,
+placa:servico.placa,
+valor,
+pagamento,
+data:new Date().toLocaleDateString()
+})
+
+localStorage.setItem("historico",JSON.stringify(historico))
+
+servicos=servicos.filter(s=>s.id!=id)
+
+localStorage.setItem("servicos",JSON.stringify(servicos))
+
+mostrarServicos()
+
+}
+
+
+
+function cancelarServico(id){
+
+servicos=servicos.filter(s=>s.id!=id)
+
+localStorage.setItem("servicos",JSON.stringify(servicos))
+
+mostrarServicos()
+
+}
+
+
+
+function calcularRelatorio(){
+
+let hoje=new Date().toLocaleDateString()
+
+let totalDia=0
+let pix=0
+let dinheiro=0
+let debito=0
+let credito=0
+let totalMes=0
+let totalGeral=0
+
+historico.forEach(h=>{
+
+let valor=parseFloat(h.valor)||0
+
+totalGeral+=valor
+
+let partes=h.data.split("/")
+let data=new Date(partes[2],partes[1]-1,partes[0])
+
+let hojeData=new Date()
+
+if(h.data==hoje){
+
+totalDia+=valor
+
+if(h.pagamento=="Pix") pix+=valor
+if(h.pagamento=="Dinheiro") dinheiro+=valor
+if(h.pagamento=="Cartão Débito") debito+=valor
+if(h.pagamento=="Cartão Crédito") credito+=valor
+
+}
+
+if(data.getMonth()==hojeData.getMonth() && data.getFullYear()==hojeData.getFullYear()){
+
+totalMes+=valor
+
+}
+
+})
+
+document.getElementById("totalDia").innerText=totalDia.toFixed(2)
+document.getElementById("pixDia").innerText=pix.toFixed(2)
+document.getElementById("dinheiroDia").innerText=dinheiro.toFixed(2)
+document.getElementById("debitoDia").innerText=debito.toFixed(2)
+document.getElementById("creditoDia").innerText=credito.toFixed(2)
+document.getElementById("totalMes").innerText=totalMes.toFixed(2)
+document.getElementById("totalGeral").innerText=totalGeral.toFixed(2)
+
+gerarGrafico()
+
+}
+
+
+
+function gerarGrafico(){
+
+let dias={}
+
+historico.forEach(h=>{
+
+if(!dias[h.data]) dias[h.data]=0
+dias[h.data]+=parseFloat(h.valor)
+
+})
+
+let ctx=document.getElementById("grafico")
+
+new Chart(ctx,{
+type:"bar",
+data:{
+labels:Object.keys(dias),
+datasets:[{
+label:"Faturamento",
+data:Object.values(dias)
+}]
+}
+})
+
+}
+
+
+
+function carregarHistorico(){
+
+let lista=document.getElementById("listaHistorico")
+lista.innerHTML=""
+
+historico.forEach(h=>{
+
+lista.innerHTML+=`
+
+<div class="servico">
+
+<b>${h.cliente}</b><br>
+${h.placa}<br>
+R$ ${h.valor}<br>
+${h.pagamento}<br>
+${h.data}
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+function buscarHistorico(){
+
+let busca=document.getElementById("buscarCliente").value.toLowerCase()
+
+let lista=document.getElementById("listaHistorico")
+lista.innerHTML=""
+
+historico.filter(h=>h.cliente.toLowerCase().includes(busca)).forEach(h=>{
+
+lista.innerHTML+=`
+
+<div class="servico">
+
+<b>${h.cliente}</b><br>
+${h.placa}<br>
+R$ ${h.valor}<br>
+${h.pagamento}<br>
+${h.data}
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+function salvarAgendamento(){
+
+let nome=document.getElementById("nomeAg").value
+let tel=document.getElementById("telAg").value
+let data=document.getElementById("dataAg").value
+
+agendamentos.push({nome,tel,data})
+
+localStorage.setItem("agendamentos",JSON.stringify(agendamentos))
+
+mostrarAgendamentos()
+
+}
+
+
+
+function mostrarAgendamentos(){
+
+let lista=document.getElementById("listaAgendamentos")
+lista.innerHTML=""
+
+agendamentos.forEach((a,i)=>{
+
+lista.innerHTML+=`
+
+<div class="servico">
+
+<b>${a.nome}</b><br>
+${a.tel}<br>
+${a.data}
+
+<br>
+
+<button onclick="finalizarAgendamento(${i})">Finalizar</button>
+<button onclick="cancelarAgendamento(${i})">Cancelar</button>
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+function finalizarAgendamento(i){
+
+agendamentos.splice(i,1)
+
+localStorage.setItem("agendamentos",JSON.stringify(agendamentos))
+
+mostrarAgendamentos()
+
+}
+
+
+
+function cancelarAgendamento(i){
+
+agendamentos.splice(i,1)
+
+localStorage.setItem("agendamentos",JSON.stringify(agendamentos))
+
+mostrarAgendamentos()
+
+}
+
+
+
+function enviarOrcamento(){
+
+let cliente=document.getElementById("clienteOrc").value
+let desc=document.getElementById("descOrc").value
+let valor=document.getElementById("valorOrc").value
+
+let texto=`Orçamento de Serviço%0ACliente: ${cliente}%0AServiço: ${desc}%0AValor: R$ ${valor}`
+
+window.open("https://wa.me/?text="+texto)
+
+}
+
+</script>
+
+</body>
+</html>
